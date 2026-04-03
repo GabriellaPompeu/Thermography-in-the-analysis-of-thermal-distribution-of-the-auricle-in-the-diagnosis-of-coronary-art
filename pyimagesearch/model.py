@@ -41,4 +41,46 @@ class Encoder(Module):
         
         return blockOutputs
     
-class Decoder # Continue
+class Decoder(Module):
+    def __init__(self, channels=(64, 32, 16)):
+        super().__init__()
+        self.channels = channels 
+        self.upconvs = ModuleList(
+            [ConvTranspose2d(channels[i], channels[i+1], 2, 2) for i in range(len(channels) - 1)]
+        )
+        self.dec_blocks = ModuleList(
+            [Block(channels[i], channels[i+1]) for i in range(len(channels) - 1)]
+        )
+    
+    def forward(self, x, encFeatures):
+        for i in range(len(self.channels) - 1):
+            x = self.upconvs[i](x)
+            encFeatures = self.crop(encFeatures[i], x)
+            x = torch.cat([x, encFeat], dim=1)
+            x = self.dec_blocks[i](x)
+        return x
+    
+    def crop(self, encFeatures, x):
+        (_, _, H, W) = x.shape
+        encFeatures = CenterCrop([H, W])(encFeatures)
+        return encFeatures
+
+class UNet(Module):
+    def __init__(self, encChannels=(3, 16, 32, 64),
+    decChannels=(64, 32, 16), nbClasses=1, retainDim=True,
+    outSize=(config.INPUT_IMAGE_HEIGHT, config.INPUT_IMAGE_WIDTH)):
+        self.encoder = Encoder(encChannels)
+        self.decoder = Decoder(decChannels)
+
+        self.head = Conv2d(decChannels[-1], nbClasses, 1)
+        self.retainDim = retainDim
+        self.outSize = outSize
+    
+    def forward(self, x):
+        encFeatures = self.encoder(x)
+        decFeatures = self.decoder(encFeatures[::-1][0], encFeatures[::-1][1:])
+        map = self.head(decFeatures)
+        if self.retainDim:
+            map = F.interpolate(map, self.outSize)
+        
+        return map 
