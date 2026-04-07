@@ -12,6 +12,9 @@ The code was inspered in this site: https://pyimagesearch.com/2021/11/08/u-net-t
 6. Prediction on new images
 7. Visualization of results
 
+## The Masks Converter
+My masks were in JSON format, so I created a converter to get my masks in PNG. This converter is located in the file called "convert_masks.py"
+
 ## DatasetLoader
 The SegmentationDataset do:
 1. Image → tensor
