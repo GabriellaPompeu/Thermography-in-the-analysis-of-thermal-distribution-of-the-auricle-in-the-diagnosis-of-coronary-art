@@ -16,9 +16,9 @@ import torch
 class Block(Module):
     def __init__(self, inChannels, outChannels):
         super().__init__()
-        self.conv1 = Conv2d(inChannels, outChannels, 3)
+        self.conv1 = Conv2d(inChannels, outChannels, 3, padding=1)
         self.relu = ReLU()
-        self.conv2 = Conv2d(outChannels, inChannels, 3)
+        self.conv2 = Conv2d(outChannels, outChannels, 3, padding=1)
 
     def forward(self, x):
         return self.conv2(self.relu(self.conv1(x)))
@@ -55,7 +55,7 @@ class Decoder(Module):
     def forward(self, x, encFeatures):
         for i in range(len(self.channels) - 1):
             x = self.upconvs[i](x)
-            encFeatures = self.crop(encFeatures[i], x)
+            encFeat = self.crop(encFeatures[i], x)
             x = torch.cat([x, encFeat], dim=1)
             x = self.dec_blocks[i](x)
         return x
@@ -66,9 +66,9 @@ class Decoder(Module):
         return encFeatures
 
 class UNet(Module):
-    def __init__(self, encChannels=(3, 16, 32, 64),
-    decChannels=(64, 32, 16), nbClasses=1, retainDim=True,
-    outSize=(config.INPUT_IMAGE_HEIGHT, config.INPUT_IMAGE_WIDTH)):
+    def __init__(self, encChannels=(3, 16, 32, 64), decChannels=(64, 32, 16), nbClasses=1,
+        retainDim=True, outSize=(config.INPUT_IMAGE_HEIGHT, config.INPUT_IMAGE_WIDTH)):
+        super().__init__()
         self.encoder = Encoder(encChannels)
         self.decoder = Decoder(decChannels)
 

@@ -7,7 +7,7 @@ DATASET_PATH = os.path.join("dataset", "train")
 
 # Defining the path to the images and masks dataset
 IMAGE_DATASET_PATH = os.path.join(DATASET_PATH, "images")
-MASK_DATASET_PATH = os.path.join(DATASET_PATH, "masks")
+MASK_DATASET_PATH = os.path.join(DATASET_PATH, "masks_png")
 
 # Defining the fraction of the dataset I will keep aside for the test set
 TEST_SPLIT = 0.15
@@ -24,7 +24,7 @@ NUM_LEVELS = 3
 # Initializing training parameters
 INIT_LR = 0.0001
 NUM_EPOCHS = 40
-BATCH_SIZE = 64
+BATCH_SIZE = 2
 
 # Defining the input image dimensions
 INPUT_IMAGE_WIDTH = 128
