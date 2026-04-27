@@ -1,7 +1,7 @@
-# Facial-recognition-in-thermal-images
+# Thermography in the analysis of thermal distribution of the auricle in the diagnosis of coronary artery disease.
 This repository contains my undergraduate research project, conducted at UFF, with the goal of learning how to use neural networks in thermal imaging.
 
-The code was inspered in this site: https://pyimagesearch.com/2021/11/08/u-net-training-image-segmentation-models-in-pytorch/ 
+The code for the U-Net application was inspered in this site: https://pyimagesearch.com/2021/11/08/u-net-training-image-segmentation-models-in-pytorch/ 
 
 ## Pipeline
 1. Image annotation
