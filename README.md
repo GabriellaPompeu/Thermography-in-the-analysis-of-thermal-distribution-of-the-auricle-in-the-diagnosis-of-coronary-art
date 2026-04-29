@@ -1,7 +1,6 @@
 # Thermography in the analysis of thermal distribution of the auricle in the diagnosis of coronary artery disease.
 This repository contains my undergraduate research project, conducted at UFF, with the goal of learning how to use neural networks in thermal imaging.
-
-The code for the U-Net application was inspered in this site: https://pyimagesearch.com/2021/11/08/u-net-training-image-segmentation-models-in-pytorch/ 
+The program implements a complete semantic segmentation pipeline for thermal images, whose objective is to automatically identify a region of interest (for example, the edge of the ear) and, from it, extract quantitative information such as average, minimum, and maximum temperature. The code for the U-Net application was inspered in this site: https://pyimagesearch.com/2021/11/08/u-net-training-image-segmentation-models-in-pytorch/ 
 
 ## Pipeline
 1. Image annotation
@@ -22,15 +21,5 @@ The SegmentationDataset do:
 3. Resize
 4. Normalization
 
-## The Training Flow
-Dataset
-   ↓
-DataLoader
-   ↓
-U-Net
-   ↓
-Loss (BCEWithLogits)
-   ↓
-Backpropagation
-   ↓
-Atualização dos pesos
+## The Training
+In general, this pipeline implements a complete supervised training flow for image segmentation, integrating data preparation, variability enhancement, architecture definition, optimization, and continuous evaluation, providing a solid foundation for future system improvements and extensions. At the end of the training period, a graph is generated showing the evolution of training and test losses over the epochs, allowing for a visual analysis of the model's behavior, such as identifying overfitting or underfitting.
