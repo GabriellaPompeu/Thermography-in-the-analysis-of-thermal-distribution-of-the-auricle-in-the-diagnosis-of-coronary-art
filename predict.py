@@ -17,9 +17,70 @@ def extract_thermal_features_flir(thermal, mask):
     region = thermal[mask == 1]
 
     if len(region) == 0:
-        return None, None, None
+        return None, None, None, None
 
-    return np.mean(region), np.min(region), np.max(region)
+    return np.mean(region), np.min(region), np.max(region), np.std(region)
+
+def save_results_table(ious, dices, accs, temps_mean, temps_min, temps_max):
+    data = [
+        ["IoU", np.mean(ious), np.std(ious)],
+        ["Dice", np.mean(dices), np.std(dices)],
+        ["Accuracy", np.mean(accs), np.std(accs)],
+    ]
+
+    if len(temps_mean) > 0:
+        data.extend([
+            ["Temp Mean", np.mean(temps_mean), np.std(temps_mean)],
+            ["Temp Min", np.mean(temps_min), np.std(temps_min)],
+            ["Temp Max", np.mean(temps_max), np.std(temps_max)],
+        ])
+
+    columns = ["Métrica", "Média", "Desvio Padrão"]
+
+    fig, ax = plt.subplots(figsize=(6, 4))
+    ax.axis('off')
+
+    table = ax.table(cellText=data, colLabels=columns, loc='center')
+
+    table.auto_set_font_size(False)
+    table.set_fontsize(7)
+    table.scale(1, 1.5)
+
+    os.makedirs(config.BASE_PRED, exist_ok=True)
+    plt.savefig(os.path.join(config.BASE_PRED, "results_table.png"), bbox_inches='tight')
+    plt.close()
+
+def plot_temperature_per_image(temps_mean, temps_min, temps_max, temps_std):
+    import matplotlib.pyplot as plt
+
+    x = range(len(temps_mean))
+
+    plt.figure()
+
+    # média com desvio padrão
+    plt.errorbar(
+        x,
+        temps_mean,
+        yerr=temps_std,
+        fmt='o',
+        capsize=5,
+        label="Mean ± Std"
+    )
+
+    # min e max (opcional)
+    plt.plot(x, temps_min, linestyle='--', label="Min")
+    plt.plot(x, temps_max, linestyle='--', label="Max")
+
+    plt.fill_between(x, temps_min, temps_max, alpha=0.2)
+
+    plt.xlabel("Image Index")
+    plt.ylabel("Temperature (°C)")
+    plt.title("Temperature per Image")
+    plt.legend()
+    plt.grid(True)
+
+    plt.savefig(os.path.join(config.BASE_PRED, "temperature_per_image.png"))
+    plt.close()
 
 def prepare_plot(origImage, origMask, predMask):
 	figure, ax = plt.subplots(nrows=1, ncols=3, figsize=(10, 10))
@@ -40,10 +101,12 @@ def make_predictions(model, imagePath):
 	with torch.no_grad():
 		image = cv.imread(imagePath)
 		image = cv.cvtColor(image, cv.COLOR_BGR2RGB)
-		image = image.astype("float32") / 255.0
 
+		orig = image.copy()  # imagem original (sem resize)
+		(H, W) = image.shape[:2]  # tamanho original
+
+		image = image.astype("float32") / 255.0
 		image = cv.resize(image, (128, 128))
-		orig = image.copy()
 
 		filename = imagePath.split(os.path.sep)[-1]
 		groundTruthPath = os.path.join(
@@ -52,7 +115,7 @@ def make_predictions(model, imagePath):
 		)
 		
 		gtMask = cv.imread(groundTruthPath, 0)
-		gtMask = cv.resize(gtMask, (config.INPUT_IMAGE_HEIGHT, config.INPUT_IMAGE_HEIGHT))
+		gtMask = cv.resize(gtMask, (W, H), interpolation=cv.INTER_NEAREST)
 		
 		gtMask_bin = (gtMask > 0).astype(np.uint8)
 
@@ -65,6 +128,7 @@ def make_predictions(model, imagePath):
 		predMask = predMask.cpu().numpy()
 
 		predMask_bin = (predMask > config.THRESHOLD).astype(np.uint8)
+		predMask_bin = cv.resize(predMask_bin, (W, H), interpolation=cv.INTER_NEAREST)
 		predMask_vis = predMask_bin * 255
 
 		os.makedirs(config.BASE_PRED, exist_ok=True)
@@ -72,18 +136,20 @@ def make_predictions(model, imagePath):
 		cv.imwrite(output_path, predMask_vis)
 
 		overlay = orig.copy()
-		overlay[predMask_bin == 1] = [255, 0, 0]  
+		contours, _ = cv.findContours(predMask_bin.astype(np.uint8), cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+
+		cv.drawContours(overlay, contours, -1, (0, 255, 0), 3)  # vermelho, espessura 2
 
 		cv.imwrite(
 			os.path.join(config.BASE_PRED, filename.replace(".jpg", "_overlay.png")),
-			cv.cvtColor((overlay * 255).astype("uint8"), cv.COLOR_RGB2BGR)
+			cv.cvtColor(overlay, cv.COLOR_RGB2BGR)
 		)
 
 		thermal = load_thermal_data(imagePath)
-		thermal = cv.resize(thermal, (config.INPUT_IMAGE_WIDTH, config.INPUT_IMAGE_HEIGHT))
+		thermal = cv.resize(thermal, (W, H), interpolation=cv.INTER_NEAREST)
 
 		iou, dice, acc = compute_metrics(predMask_bin, gtMask_bin)
-		temp_mean, temp_min, temp_max = extract_thermal_features_flir(thermal, predMask_bin)
+		temp_mean, temp_min, temp_max, temp_std = extract_thermal_features_flir(thermal, predMask_bin)
 
 		print("====Temperaturas em Celsius====\n")
 		print(f"mean: {temp_mean:.2f} | min: {temp_min:.2f} | max: {temp_max:.2f}")
@@ -91,7 +157,7 @@ def make_predictions(model, imagePath):
 		
 		prepare_plot(orig, gtMask, predMask_vis)
 
-		return iou, dice, acc
+		return iou, dice, acc, temp_mean, temp_min, temp_max, temp_std
 
 def compute_metrics(pred, gt):
     pred = pred > 0
@@ -118,14 +184,26 @@ print("Load up model...")
 unet = torch.load(config.MODEL_PATH, weights_only=False).to(config.DEVICE)
 
 ious, dices, accs = [], [], []
+temps_mean, temps_min, temps_max, temps_std = [], [], [], []
 
 for path in imagePaths:
 	result = make_predictions(unet, path)
+
 	if result is not None:
-		iou, dice, acc = result
+		iou, dice, acc, t_mean, t_min, t_max, t_std = result
+
 		ious.append(iou)
 		dices.append(dice)
 		accs.append(acc)
+
+		if t_mean is not None:
+			temps_mean.append(t_mean)
+			temps_min.append(t_min)
+			temps_max.append(t_max)
+			temps_std.append(t_std)
+
+save_results_table(ious, dices, accs, temps_mean, temps_min, temps_max)
+plot_temperature_per_image(temps_mean, temps_min, temps_max, temps_std)
 
 print("\n=== RESULTADOS MEDIOS ===")
 print(f"IoU medio: {np.mean(ious):.4f}")

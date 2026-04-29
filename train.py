@@ -81,14 +81,14 @@ train_transform = A.Compose([
     A.RandomBrightnessContrast(p=0.3),
     A.GaussianBlur(p=0.2),
     
-    A.Normalize(mean=(0.0, 0.0, 0.0), std=(1.0, 1.0, 1.0)),  # 🔥 IMPORTANTE
+    A.Normalize(mean=(0.0, 0.0, 0.0), std=(1.0, 1.0, 1.0)), 
     ToTensorV2()
 ])
 
 val_transform = A.Compose([
     A.Resize(config.INPUT_IMAGE_HEIGHT, config.INPUT_IMAGE_WIDTH),
     
-    A.Normalize(mean=(0.0, 0.0, 0.0), std=(1.0, 1.0, 1.0)),  # 🔥 IMPORTANTE
+    A.Normalize(mean=(0.0, 0.0, 0.0), std=(1.0, 1.0, 1.0)), 
     ToTensorV2()
 ])
 
@@ -108,7 +108,7 @@ testLoader = DataLoader(testDS, shuffle=False,
 unet = UNet().to(config.DEVICE)
 # lossFunc = BCEWithLogitsLoss()
 bceLoss = BCEWithLogitsLoss(
-    pos_weight=torch.tensor([3.0]).to(config.DEVICE)  # ⚖️ balanceamento
+    pos_weight=torch.tensor([3.0]).to(config.DEVICE) 
 )
 
 diceLoss = DiceLoss()
