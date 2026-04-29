@@ -1,0 +1,13 @@
+dataset\train\images\FLIR5189.jpg
+dataset\train\images\FLIR4044.jpg
+dataset\train\images\FLIR5179.jpg
+dataset\train\images\FLIR4178.jpg
+dataset\train\images\FLIR4164.jpg
+dataset\train\images\FLIR4957.jpg
+dataset\train\images\FLIR4058.jpg
+dataset\train\images\FLIR4173.jpg
+dataset\train\images\FLIR4050.jpg
+dataset\train\images\FLIR5174.jpg
+dataset\train\images\FLIR4965.jpg
+dataset\train\images\FLIR4969.jpg
+dataset\train\images\FLIR4953.jpg
