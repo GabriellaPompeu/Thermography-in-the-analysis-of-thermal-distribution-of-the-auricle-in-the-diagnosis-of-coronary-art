@@ -1,4 +1,4 @@
-from pyimagesearch import config
+from core import config
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
