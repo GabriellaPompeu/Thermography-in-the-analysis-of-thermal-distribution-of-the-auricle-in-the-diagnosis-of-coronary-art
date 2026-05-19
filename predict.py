@@ -23,16 +23,16 @@ def extract_thermal_features_flir(thermal, mask):
 
 def save_results_table(ious, dices, accs, temps_mean, temps_min, temps_max):
     data = [
-        ["IoU", np.mean(ious), np.std(ious)],
-        ["Dice", np.mean(dices), np.std(dices)],
-        ["Accuracy", np.mean(accs), np.std(accs)],
+        ["IoU", f"{np.mean(ious):.4f}", f"{np.std(ious):.4f}"],
+        ["Dice", f"{np.mean(dices):.4f}", f"{np.std(dices):.4f}"],
+        ["Accuracy", f"{np.mean(accs):.4f}", f"{np.std(accs):.4f}"],
     ]
 
     if len(temps_mean) > 0:
         data.extend([
-            ["Temp Mean", np.mean(temps_mean), np.std(temps_mean)],
-            ["Temp Min", np.mean(temps_min), np.std(temps_min)],
-            ["Temp Max", np.mean(temps_max), np.std(temps_max)],
+            ["Temp Mean", f"{np.mean(temps_mean):.4f}", f"{np.std(temps_mean):.4f}"],
+            ["Temp Min", f"{np.mean(temps_min):.4f}", f"{np.std(temps_min):.4f}"],
+            ["Temp Max", f"{np.mean(temps_max):.4f}", f"{np.std(temps_max):.4f}"],
         ])
 
     columns = ["Métrica", "Média", "Desvio Padrão"]
