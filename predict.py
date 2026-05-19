@@ -21,6 +21,19 @@ def extract_thermal_features_flir(thermal, mask):
 
     return np.mean(region), np.min(region), np.max(region), np.std(region)
 
+def keep_largest_component(mask):
+    mask = mask.astype(np.uint8)
+    num_labels, labels, stats, _ = cv.connectedComponentsWithStats(mask, connectivity=8)
+
+    if num_labels <= 1:
+        return mask
+
+    largest_label = 1 + np.argmax(stats[1:, cv.CC_STAT_AREA])
+    filtered = np.zeros_like(mask)
+    filtered[labels == largest_label] = 1
+
+    return filtered
+
 def save_results_table(ious, dices, accs, temps_mean, temps_min, temps_max):
     data = [
         ["IoU", f"{np.mean(ious):.4f}", f"{np.std(ious):.4f}"],
@@ -41,7 +54,6 @@ def save_results_table(ious, dices, accs, temps_mean, temps_min, temps_max):
     ax.axis('off')
 
     table = ax.table(cellText=data, colLabels=columns, loc='center')
-
     table.auto_set_font_size(False)
     table.set_fontsize(7)
     table.scale(1, 1.5)
@@ -67,7 +79,6 @@ def plot_temperature_per_image(temps_mean, temps_min, temps_max, temps_std):
         label="Mean ± Std"
     )
 
-    # min e max (opcional)
     plt.plot(x, temps_min, linestyle='--', label="Min")
     plt.plot(x, temps_max, linestyle='--', label="Max")
 
@@ -127,11 +138,11 @@ def make_predictions(model, imagePath):
 		image = cv.imread(imagePath)
 		image = cv.cvtColor(image, cv.COLOR_BGR2RGB)
 
-		orig = image.copy()  # imagem original (sem resize)
+		orig = image.copy()  # imagem original
 		(H, W) = image.shape[:2]  # tamanho original
 
 		image = image.astype("float32") / 255.0
-		image = cv.resize(image, (128, 128))
+		image = cv.resize(image, (config.INPUT_IMAGE_HEIGHT, config.INPUT_IMAGE_WIDTH))
 
 		filename = imagePath.split(os.path.sep)[-1]
 		groundTruthPath = os.path.join(
@@ -153,6 +164,7 @@ def make_predictions(model, imagePath):
 		predMask = predMask.cpu().numpy()
 
 		predMask_bin = (predMask > config.THRESHOLD).astype(np.uint8)
+		predMask_bin = keep_largest_component(predMask_bin)
 		predMask_bin = cv.resize(predMask_bin, (W, H), interpolation=cv.INTER_NEAREST)
 		predMask_vis = predMask_bin * 255
 
@@ -163,7 +175,7 @@ def make_predictions(model, imagePath):
 		overlay = orig.copy()
 		contours, _ = cv.findContours(predMask_bin.astype(np.uint8), cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
 
-		cv.drawContours(overlay, contours, -1, (0, 255, 0), 3)  # vermelho, espessura 2
+		cv.drawContours(overlay, contours, -1, (0, 255, 0), 3)  # verde, espessura 2
 
 		cv.imwrite(
 			os.path.join(config.BASE_PRED, filename.replace(".jpg", "_overlay.png")),
@@ -196,16 +208,13 @@ def compute_metrics(pred, gt):
     union = np.logical_or(pred, gt).sum()
 
     iou = intersection / (union + 1e-8)
-
     dice = (2 * intersection) / (pred.sum() + gt.sum() + 1e-8)
-
     accuracy = (pred == gt).sum() / pred.size
 
     return iou, dice, accuracy
 
 print("Loading up test image paths...")
 imagePaths = open(config.TEST_PATHS).read().strip().split("\n")
-# imagePaths = np.random.choice(imagePaths, size=10)
 print("Load up model...")
 unet = torch.load(config.MODEL_PATH, weights_only=False).to(config.DEVICE)
 
