@@ -96,6 +96,31 @@ def prepare_plot(origImage, origMask, predMask):
 	figure.tight_layout()
 	plt.show()
 
+def plot_prediction_quality(orig, gt, pred, iou, dice, save_path=None):
+    import matplotlib.pyplot as plt
+
+    fig, ax = plt.subplots(1, 3, figsize=(12, 4))
+
+    ax[0].imshow(orig)
+    ax[0].set_title("Imagem")
+    ax[0].axis("off")
+
+    ax[1].imshow(gt, cmap="gray")
+    ax[1].set_title("Ground Truth")
+    ax[1].axis("off")
+
+    ax[2].imshow(pred, cmap="gray")
+    ax[2].set_title(f"Predição\nIoU: {iou:.3f} | Dice: {dice:.3f}")
+    ax[2].axis("off")
+
+    plt.tight_layout()
+
+    if save_path:
+        plt.savefig(save_path)
+        plt.close()
+    else:
+        plt.show()
+
 def make_predictions(model, imagePath):
 	model.eval()
 	with torch.no_grad():
@@ -149,6 +174,7 @@ def make_predictions(model, imagePath):
 		thermal = cv.resize(thermal, (W, H), interpolation=cv.INTER_NEAREST)
 
 		iou, dice, acc = compute_metrics(predMask_bin, gtMask_bin)
+		plot_prediction_quality(orig, gtMask, predMask_vis, iou, dice, save_path=os.path.join(config.BASE_PRED, filename.replace(".jpg", "_plot.png")))
 		temp_mean, temp_min, temp_max, temp_std = extract_thermal_features_flir(thermal, predMask_bin)
 
 		print("====Temperaturas em Celsius====\n")
